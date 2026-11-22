@@ -43,7 +43,45 @@ $("date").textContent=new Date().toLocaleDateString("en-US",{weekday:"long",mont
 function go(page){document.querySelectorAll(".page").forEach(x=>x.classList.toggle("active",x.id===page));document.querySelectorAll(".nav").forEach(x=>x.classList.toggle("active",x.dataset.page===page));if(page==="progress"||page==="home")render();if(page==="library")renderLibrary();window.scrollTo(0,0)}
 document.querySelectorAll("[data-page]").forEach(b=>b.onclick=()=>go(b.dataset.page));
 document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>go(b.dataset.go));
-function speak(text){if(!("speechSynthesis" in window)){ $("voiceNote").textContent="Audio unavailable. Try Chrome or Edge, or type with a parent.";return}try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(text);u.lang="en-US";u.rate=.83;speechSynthesis.speak(u)}catch(e){$("voiceNote").textContent="Audio could not start. Tap Hear word again or check browser sound permissions."}}
+
+const VOICE_KEY="beebloom_voice_preferences_v1";
+let voicePreference={name:"",rate:0.83};
+try{voicePreference={...voicePreference,...JSON.parse(localStorage.getItem(VOICE_KEY)||"{}")}}catch{}
+let availableVoices=[];
+function loadVoices(){
+ if(!("speechSynthesis" in window))return;
+ availableVoices=speechSynthesis.getVoices().filter(v=>/^en(?:-|$)/i.test(v.lang)).sort((a,b)=>a.lang.localeCompare(b.lang)||a.name.localeCompare(b.name));
+ const selector=$("voiceSelect");
+ const existing=voicePreference.name;
+ selector.replaceChildren();
+ const automatic=new Option("🐝 Default voice (device)", "");
+ selector.add(automatic);
+ for(const voice of availableVoices)selector.add(new Option(voice.name+" ("+voice.lang+")"+(voice.localService?"":" · online"),voice.voiceURI));
+ selector.value=availableVoices.some(v=>v.voiceURI===existing)?existing:"";
+ $("voiceStatus").textContent=availableVoices.length?availableVoices.length+" English voices on this device/browser":"No English voices reported yet. Try refreshing or another browser.";
+}
+function saveVoice(){try{localStorage.setItem(VOICE_KEY,JSON.stringify(voicePreference))}catch{}}
+function speak(text){
+ if(!("speechSynthesis" in window)){$("voiceNote").textContent="Audio unavailable. Try Chrome or Edge.";return}
+ try{
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  const voice=availableVoices.find(v=>v.voiceURI===voicePreference.name);
+  if(voice){u.voice=voice;u.lang=voice.lang}else u.lang="en-US";
+  u.rate=Number(voicePreference.rate)||0.83;
+  speechSynthesis.speak(u);
+ }catch(e){$("voiceNote").textContent="Audio could not start. Check sound settings or select a different voice."}
+}
+$("voiceSelect").onchange=e=>{voicePreference.name=e.target.value;saveVoice()};
+$("voiceSpeed").value=String(voicePreference.rate);
+$("voiceSpeed").onchange=e=>{voicePreference.rate=Number(e.target.value);saveVoice()};
+$("previewVoice").onclick=()=>speak("Hello, spelling star! I am your spelling bee coach. Your word is butterfly.");
+if("speechSynthesis" in window){
+ loadVoices();
+ speechSynthesis.addEventListener?.("voiceschanged",loadVoices);
+ setTimeout(loadVoices,800);
+}
+
 function norm(s){return s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z]/g,"")}
 function letterNorm(s){let t=s.toLowerCase().trim().replace(/^(i spell|spelling|my spelling is|the word is)\s+/,"");const names={ay:"a",bee:"b",be:"b",cee:"c",see:"c",dee:"d",ee:"e",eff:"f",gee:"g",aitch:"h",eye:"i",jay:"j",kay:"k",ell:"l",em:"m",en:"n",oh:"o",pee:"p",cue:"q",queue:"q",are:"r",ess:"s",tee:"t",you:"u",vee:"v",doubleyou:"w",ex:"x",why:"y",zee:"z",zed:"z"};const tokens=t.replace(/[-.,]/g," ").split(/\s+/).filter(Boolean);return tokens.length>1?tokens.map(x=>names[x]||x).join("").replace(/[^a-z]/g,""):norm(t)}
 
