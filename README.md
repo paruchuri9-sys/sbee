@@ -12,7 +12,7 @@ Serve the repository as static files (`python -m http.server 5173`) and open `ht
 - Ask for a definition, sentence, or repetition before spelling.
 - Learn spelling patterns and practice on unseen words.
 - Track attempts and active learning time locally on the device.
-- Import CSV or TXT word lists locally. No word lists are committed to the repository.
+- Import the copyrighted 450-word study PDF locally in the browser, or use CSV/TXT word lists. PDF extraction uses PDF.js from a CDN. No word lists are committed to the repository.
 
 ## Important limitations
 
