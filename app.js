@@ -60,11 +60,14 @@ function loadVoices(){
  }
  try{
   const voices=window.speechSynthesis.getVoices()||[];
-  availableVoices=voices.filter(v=>v&&/^en(?:-|$)/i.test(v.lang||"")).sort((a,b)=>(a.lang||"").localeCompare(b.lang||"")||(a.name||"").localeCompare(b.name||""));
+  // Only explicitly US English voices; never silently substitute UK/AU accents.
+  const us=v=>/^en[-_]US$/i.test(v.lang||"");
+  const quality=v=>/premium|enhanced|natural|neural|siri/i.test(v.name||"")?0:1;
+  availableVoices=voices.filter(v=>v&&us(v)).sort((a,b)=>quality(a)-quality(b)||(a.name||"").localeCompare(b.name||""));
   while(selector.firstChild)selector.removeChild(selector.firstChild);
   const automatic=document.createElement("option");
   automatic.value="";
-  automatic.textContent="🐝 Default voice (device)";
+  automatic.textContent="🐝 Automatic U.S. voice";
   selector.appendChild(automatic);
   for(const voice of availableVoices){
    const option=document.createElement("option");
@@ -74,8 +77,8 @@ function loadVoices(){
   }
   selector.value=availableVoices.some(v=>v.voiceURI===voicePreference.name)?voicePreference.name:"";
   status.textContent=availableVoices.length
-   ?availableVoices.length+" English voices available. Tap Preview voice to try one."
-   :"Safari has not exposed extra English voices. Use Default voice and Preview voice. You can also try iPad Settings → Accessibility → Spoken Content → Voices.";
+   ?availableVoices.length+" U.S. English voices found. Enhanced/Natural voices are listed first when available."
+   :"No U.S. English voices exposed by Safari. The browser may still use its default voice; check iPad Settings → Accessibility → Spoken Content → Voices for U.S. voices.";
  }catch(error){
   status.textContent="Voice list unavailable on this iPad. Default voice and Preview voice may still work.";
  }
@@ -86,8 +89,8 @@ function speak(text){
  try{
   speechSynthesis.cancel();
   const u=new SpeechSynthesisUtterance(text);
-  const voice=availableVoices.find(v=>v.voiceURI===voicePreference.name);
-  if(voice){u.voice=voice;u.lang=voice.lang}else u.lang="en-US";
+  const voice=availableVoices.find(v=>v.voiceURI===voicePreference.name)||availableVoices[0];
+  if(voice){u.voice=voice;u.lang="en-US"}else u.lang="en-US";
   u.rate=Number(voicePreference.rate)||0.83;
   speechSynthesis.speak(u);
  }catch(e){$("voiceNote").textContent="Audio could not start. Check sound settings or select a different voice."}
