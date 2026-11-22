@@ -3,24 +3,26 @@
 
 "use strict";
 const demo=[
-{word:"whistle",definition:"A device that makes a high sound when air passes through it.",sentence:"The coach blew a whistle."},
-{word:"rabbit",definition:"A small animal with long ears.",sentence:"A rabbit hopped through the garden."},
-{word:"sparkle",definition:"To shine with small flashes of light.",sentence:"The stars sparkle at night."},
-{word:"library",definition:"A place where people can read and borrow books.",sentence:"She checked out a book from the library."},
-{word:"cottage",definition:"A small house.",sentence:"They stayed in a cottage by the lake."},
-{word:"cautious",definition:"Careful to avoid danger or mistakes.",sentence:"Be cautious when crossing the road."},
-{word:"geology",definition:"The study of Earth and rocks.",sentence:"Geology helps us learn how mountains form."},
-{word:"persevere",definition:"To keep trying despite difficulty.",sentence:"We persevere when learning is hard."}
+{word:"metamorphosis",definition:"A major change in form or appearance.",sentence:"The butterfly undergoes metamorphosis."},
+{word:"perseverance",definition:"Continuing despite difficulty.",sentence:"Her perseverance helped her finish the challenge."},
+{word:"conscientious",definition:"Careful and responsible about doing things well.",sentence:"The conscientious student checked her work."},
+{word:"miscellaneous",definition:"Containing several different kinds of things.",sentence:"The drawer held miscellaneous supplies."},
+{word:"acquaintance",definition:"A person you know but not very closely.",sentence:"I met an acquaintance at the library."},
+{word:"rhythm",definition:"A repeated pattern of sounds or movements.",sentence:"The drummer kept a steady rhythm."},
+{word:"entrepreneur",definition:"A person who starts and runs a business.",sentence:"The entrepreneur opened a bakery."},
+{word:"extraordinary",definition:"Very unusual or remarkable.",sentence:"The scientist made an extraordinary discovery."},
+{word:"bureaucracy",definition:"A system managed by many administrative officials.",sentence:"The permit went through the city bureaucracy."},
+{word:"onomatopoeia",definition:"A word that imitates a sound.",sentence:"Buzz is an example of onomatopoeia."}
 ];
 const unseen=[
-{word:"photograph",definition:"A picture made with a camera.",sentence:"We took a photograph of the bee."},
-{word:"knee",definition:"The joint in the middle of the leg.",sentence:"She bent her knee."},
-{word:"careless",definition:"Not careful.",sentence:"A careless mistake is easy to fix."},
-{word:"hopping",definition:"Moving by short jumps.",sentence:"The frog was hopping."},
-{word:"reusable",definition:"Able to be used again.",sentence:"She carried a reusable water bottle."},
-{word:"telephone",definition:"A device for talking to people far away.",sentence:"The telephone rang."},
-{word:"musician",definition:"A person who makes music.",sentence:"The musician played a song."},
-{word:"unhappy",definition:"Not happy.",sentence:"He felt unhappy about the rainy day."}
+{word:"chrysanthemum",definition:"A flowering plant with many petals.",sentence:"A chrysanthemum bloomed in the garden."},
+{word:"idiosyncrasy",definition:"An unusual habit or characteristic of someone.",sentence:"Her cheerful humming was an idiosyncrasy."},
+{word:"juxtaposition",definition:"Placing things beside each other for comparison.",sentence:"The painting showed a juxtaposition of light and dark."},
+{word:"photosynthesis",definition:"How plants use sunlight to make food.",sentence:"Leaves carry out photosynthesis."},
+{word:"equilibrium",definition:"A state of balance.",sentence:"The gymnast regained her equilibrium."},
+{word:"iridescent",definition:"Showing colors that seem to change with the viewing angle.",sentence:"The shell had an iridescent surface."},
+{word:"inconspicuous",definition:"Not easily noticed.",sentence:"The small insect remained inconspicuous."},
+{word:"philanthropy",definition:"Efforts to help others, often by donating money or time.",sentence:"Their philanthropy supported the school."}
 ];
 const patterns=[
 ["🔡","Silent letters","kn, wr","Some initial letters are written but not pronounced.","knee, knit, write","Not all silent letters follow one single rule."],
@@ -150,8 +152,30 @@ function touch(){lastActivity=Date.now()}
 ["click","keydown","pointerdown","touchstart"].forEach(e=>document.addEventListener(e,touch,{passive:true}));
 document.addEventListener("visibilitychange",()=>{if(document.hidden)lastActivity=0;else touch()});
 setInterval(()=>{if(session&&!document.hidden&&Date.now()-lastActivity<60000){active++;const d=today();store.time[d]=(store.time[d]||0)+1;if(active%10===0)save()}const v=Math.floor(active/60);$("timer").textContent="⏱ "+String(v).padStart(2,"0")+":"+String(active%60).padStart(2,"0")+" active"},1000);
-function pool(){const set=$("set").value;if(set==="listed")return store.words;if(set==="unseen")return unseen.map(x=>({...x,source:"unseen"}));if(set==="review"){const misses=new Set(store.attempts.filter(x=>!x.correct).map(x=>x.word));return [...store.words,...demo,...unseen].filter(x=>misses.has(x.word))}return [...(store.words.length?store.words:demo),...unseen.map(x=>({...x,source:"unseen"}))]}
-function newRound(){let p=pool();if(!p.length){alert("No words in this set yet. Import a list or choose Mixed garden.");return}round=p.sort(()=>Math.random()-.5).slice(0,+$("roundSize").value);idx=0;session=true;active=0;touch();nextWord()}
+// The official 450-word school list is arranged in increasing challenge.
+ // Restrict every practice mode to the advanced end (entries 249–450).
+ // For imported CSV/TXT without numbered entries, use the final 45% of its
+ // existing order as a *proxy* only; this assumes the list was ordered by difficulty.
+function hardImported(){
+ const items=store.words||[];
+ if(!items.length)return [];
+ const numbered=items.filter(w=>Number.isInteger(Number(w.number))&&Number(w.number)>0);
+ if(numbered.length===items.length)return items.filter(w=>Number(w.number)>=249);
+ const cutoff=Math.max(0,Math.floor(items.length*0.55));
+ return items.slice(cutoff);
+}
+function pool(){
+ const set=$("set").value, listed=hardImported();
+ const extras=unseen.map(w=>({...w,source:"unseen"}));
+ if(set==="listed")return listed.length?listed:store.words.length?[]:demo;
+ if(set==="unseen")return extras;
+ if(set==="review"){
+  const misses=new Set(store.attempts.filter(x=>!x.correct).map(x=>x.word));
+  return [...listed,...(store.words.length?[]:demo),...extras].filter(w=>misses.has(w.word));
+ }
+ return [...(store.words.length?listed:demo),...extras];
+}
+function newRound(){let p=pool();if(!p.length){alert("No words in this set yet. Import a list or choose Mixed garden.");return}round=p.slice().sort(()=>Math.random()-.5).slice(0,+$("roundSize").value);idx=0;session=true;active=0;touch();nextWord()}
 function nextWord(){scored=false;current=round[idx]||null;$("feedback").classList.add("hidden");$("next").classList.add("hidden");$("letters").value="";$("counter").textContent="Word "+(current?idx+1:round.length)+" of "+round.length;if(!current){session=false;$("prompt").textContent="Amazing work! 🌟";$("promptInfo").textContent="Round complete. Start another round to grow stronger.";save();render();return}$("prompt").textContent="Listen carefully 🐝";$("promptInfo").textContent="Say the word, spell it letter by letter, then say the word again.";$("letters").focus();speak("Your word is "+current.word)}
 $("newRound").onclick=newRound;$("hear").onclick=()=>{if(!current){newRound();return} speak("Your word is "+current.word)};
 $("definition").onclick=()=>{if(current)speak(current.definition||"No definition provided. Ask a parent for help.")};
@@ -181,9 +205,9 @@ try{r.start()}catch{$("voiceNote").textContent="Could not start microphone. Try 
 };
 $("patternsGrid").innerHTML=patterns.map((p,i)=>'<button class="pattern" data-lesson="'+i+'"><span>'+p[0]+'</span><b>'+p[1]+'</b><small>'+p[2]+'</small></button>').join("");
 document.querySelectorAll("[data-lesson]").forEach(b=>b.onclick=()=>{const p=patterns[+b.dataset.lesson];$("lesson").innerHTML="<h2>"+p[0]+" "+p[1]+"</h2><p><b>Clue:</b> "+p[3]+"</p><p><b>Examples:</b> "+p[4]+"</p><p><b>Be careful:</b> "+p[5]+"</p><button class='primary' id='lessonSpeak'>🔊 Hear explanation</button>";$("lessonSpeak").onclick=()=>speak(p[3]+" Examples: "+p[4]+". "+p[5])});
-function render(){const a=store.attempts,correct=a.filter(x=>x.correct).length;const secs=Object.values(store.time).reduce((p,c)=>p+(Number(c)||0),0);$("homeWords").textContent=store.words.length||demo.length;$("homeMinutes").textContent=Math.floor((store.time[today()]||0)/60)+" min";$("homeAccuracy").textContent=a.length?Math.round(100*correct/a.length)+"%":"0%";$("activeTotal").textContent=Math.floor(secs/60)+" min";$("attemptTotal").textContent=a.length;const un=a.filter(x=>x.source==="unseen");$("unseenRate").textContent=un.length?Math.round(100*un.filter(x=>x.correct).length/un.length)+"%":"0%";const days=Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()-6+i);return {key:d.toLocaleDateString("en-CA"),label:d.toLocaleDateString("en-US",{weekday:"short"})}});const max=Math.max(1,...days.map(x=>store.time[x.key]||0));$("bars").innerHTML=days.map(x=>'<div class="bar-wrap"><div class="bar" style="height:'+Math.max(3,120*(store.time[x.key]||0)/max)+'px"></div>'+x.label+'<br>'+Math.floor((store.time[x.key]||0)/60)+'m</div>').join("");$("history").textContent="";a.slice(-15).reverse().forEach(x=>{let d=document.createElement("div");d.className="row";const left=document.createElement("span");left.textContent=x.word+" · "+(x.source||"listed");const right=document.createElement("b");right.textContent=x.skipped?"Skipped":x.correct?"✓ Correct":"✕ Missed";d.append(left,right);$("history").append(d)});if(!a.length)$("history").textContent="No attempts yet. Let's practice!"}
+function render(){const a=store.attempts,correct=a.filter(x=>x.correct).length;const secs=Object.values(store.time).reduce((p,c)=>p+(Number(c)||0),0);$("homeWords").textContent=store.words.length?hardImported().length:demo.length;$("homeMinutes").textContent=Math.floor((store.time[today()]||0)/60)+" min";$("homeAccuracy").textContent=a.length?Math.round(100*correct/a.length)+"%":"0%";$("activeTotal").textContent=Math.floor(secs/60)+" min";$("attemptTotal").textContent=a.length;const un=a.filter(x=>x.source==="unseen");$("unseenRate").textContent=un.length?Math.round(100*un.filter(x=>x.correct).length/un.length)+"%":"0%";const days=Array.from({length:7},(_,i)=>{const d=new Date();d.setDate(d.getDate()-6+i);return {key:d.toLocaleDateString("en-CA"),label:d.toLocaleDateString("en-US",{weekday:"short"})}});const max=Math.max(1,...days.map(x=>store.time[x.key]||0));$("bars").innerHTML=days.map(x=>'<div class="bar-wrap"><div class="bar" style="height:'+Math.max(3,120*(store.time[x.key]||0)/max)+'px"></div>'+x.label+'<br>'+Math.floor((store.time[x.key]||0)/60)+'m</div>').join("");$("history").textContent="";a.slice(-15).reverse().forEach(x=>{let d=document.createElement("div");d.className="row";const left=document.createElement("span");left.textContent=x.word+" · "+(x.source||"listed");const right=document.createElement("b");right.textContent=x.skipped?"Skipped":x.correct?"✓ Correct":"✕ Missed";d.append(left,right);$("history").append(d)});if(!a.length)$("history").textContent="No attempts yet. Let's practice!"}
 function csvRows(text){let out=[],row=[],field="",quote=false;for(let i=0;i<text.length;i++){let ch=text[i];if(ch==='"'){if(quote&&text[i+1]==='"'){field+='"';i++}else quote=!quote}else if(ch===","&&!quote){row.push(field);field=""}else if((ch==="\n"||ch==="\r")&&!quote){if(ch==="\r"&&text[i+1]==="\n")i++;row.push(field);if(row.some(x=>x.trim()))out.push(row);row=[];field=""}else field+=ch}row.push(field);if(row.some(x=>x.trim()))out.push(row);return out}
-$("import").onchange=async e=>{const file=e.target.files[0];if(!file)return;const text=await file.text();let words;if(file.name.toLowerCase().endsWith(".csv")){let rows=csvRows(text),headers=rows[0].map(x=>x.trim().toLowerCase());const hasHeader=headers.includes("word");const ix=hasHeader?headers.indexOf("word"):0,di=hasHeader?headers.indexOf("definition"):1,si=hasHeader?headers.indexOf("sentence"):2;words=rows.slice(hasHeader?1:0).map(r=>({word:(r[ix]||"").trim(),definition:di>=0?(r[di]||"").trim():"",sentence:si>=0?(r[si]||"").trim():""}))}else{words=text.split(/\r?\n/).map(x=>({word:x.trim(),definition:"",sentence:""}))}words=words.filter(x=>x.word&&/^[\p{L}\p{M}\s'-]+$/u.test(x.word));if(!words.length){$("importNote").textContent="No valid words found. Check the file format.";return}store.words=words.map(x=>({...x,source:"listed"}));save();$("importNote").textContent=words.length+" words loaded privately. Verify the preview.";renderLibrary();render()};
+$("import").onchange=async e=>{const file=e.target.files[0];if(!file)return;const text=await file.text();let words;if(file.name.toLowerCase().endsWith(".csv")){let rows=csvRows(text),headers=rows[0].map(x=>x.trim().toLowerCase());const hasHeader=headers.includes("word");const ix=hasHeader?headers.indexOf("word"):0,di=hasHeader?headers.indexOf("definition"):1,si=hasHeader?headers.indexOf("sentence"):2,ni=hasHeader?headers.indexOf("number"):-1;words=rows.slice(hasHeader?1:0).map(r=>({word:(r[ix]||"").trim(),definition:di>=0?(r[di]||"").trim():"",sentence:si>=0?(r[si]||"").trim():"",number:ni>=0?Number(r[ni]):undefined}))}else{words=text.split(/\r?\n/).map(x=>({word:x.trim(),definition:"",sentence:""}))}words=words.filter(x=>x.word&&/^[\p{L}\p{M}\s'-]+$/u.test(x.word));if(!words.length){$("importNote").textContent="No valid words found. Check the file format.";return}store.words=words.map(x=>({...x,source:"listed"}));save();$("importNote").textContent=words.length+" words loaded privately; "+hardImported().length+" selected for harder-only practice.";renderLibrary();render()};
 function renderLibrary(){const words=store.words;const search=$("search").value.toLowerCase();$("wordCount").textContent="("+words.length+")";$("preview").textContent="";words.filter(x=>x.word.toLowerCase().includes(search)).slice(0,60).forEach(x=>{let d=document.createElement("div");d.className="row";const name=document.createElement("b");name.textContent=x.word;const detail=document.createElement("span");detail.textContent=x.definition||"Definition not provided";detail.className="muted";d.append(name,detail);$("preview").append(d)});if(!words.length)$("preview").textContent="No personal words imported."}
 $("search").oninput=renderLibrary;
 $("export").onclick=()=>{save();const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(store,null,2)],{type:"application/json"}));a.download="beebloom-private-progress.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
