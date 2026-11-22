@@ -124,4 +124,4 @@ $("search").oninput=renderLibrary;
 $("export").onclick=()=>{save();const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([JSON.stringify(store,null,2)],{type:"application/json"}));a.download="beebloom-private-progress.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
 $("restore").onchange=async e=>{try{const obj=JSON.parse(await e.target.files[0].text());if(!Array.isArray(obj.words)||!Array.isArray(obj.attempts)||typeof obj.time!=="object")throw Error("Invalid backup");if(!confirm("Replace current local progress with this backup?"))return;store=obj;save();render();renderLibrary()}catch{alert("Invalid backup file.")}};
 render();renderLibrary();
-</script></body></html>
+</script><script type="module" src="pdf-import.js"></script></body></html>
