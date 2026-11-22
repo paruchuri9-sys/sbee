@@ -25,13 +25,39 @@ const unseen=[
 {word:"philanthropy",definition:"Efforts to help others, often by donating money or time.",sentence:"Their philanthropy supported the school."}
 ];
 const patterns=[
-["🔡","Silent letters","kn, wr","Some initial letters are written but not pronounced.","knee, knit, write","Not all silent letters follow one single rule."],
-["🌈","Vowel teams","ai, ay, ea, ee","Two vowel letters sometimes work together to represent one sound.","rain, play, team, sheep","A team can have different sounds, as in bread and break."],
-["🪄","Magic e","final silent e","Final e often changes a preceding vowel sound.","cap/cape, kit/kite","This is a useful clue, not a universal rule."],
-["🧱","Doubling","-ing, -ed","Often double the final consonant in a short stressed vowel-consonant word before adding a vowel suffix.","hop/hopping, plan/planned","Do not always double; compare open/opening."],
-["🌿","Prefixes","un-, re-, pre-","A prefix adds meaning to the start of a word.","unhappy, replay, preview","Check how the word parts join and whether spelling changes."],
-["🌸","Suffixes","-tion, -sion","Many nouns end with -tion or -sion; pronunciation alone may not determine which.","action, musician, decision","Word families and roots can be more reliable than sound alone."]
+["🏛️","Greek-derived spelling","ph, ch, y, ps","Greek-derived words can preserve combinations such as ph for /f/, ch for /k/, and y in places where the sound alone does not reveal spelling.","photograph, chrysanthemum, photosynthesis","Origin clues narrow possibilities but do not determine an exact spelling."],
+["🏺","Latin roots and word families","position, con-, trans-","Recognize a meaningful base or related word before spelling a long word. Position appears within juxtaposition.","position → juxtaposition; conscious → conscientious","Not every apparent letter group is an independently useful root; verify the family."],
+["🧩","Advanced suffixes","-tion, -sion, -cious","The shun sound may be written -tion or -sion. The shus sound can be -cious or -tious. Compare related words.","position → juxtaposition; conscience → conscientious","Pronunciation alone usually cannot tell you which ending is correct."],
+["🌍","Language-of-origin clues","French, Latin, Greek","A word's history can explain unusual spelling. French-influenced English vocabulary often keeps spellings that don't follow simple sound rules.","bureaucracy, entrepreneur, acquaintance","Do not infer the origin from sound alone; ask for an authoritative etymology in real contests."],
+["🥁","Unusual consonant clusters","rh, mn, sc, gn","Some words preserve historical consonant combinations that are difficult to hear. Learn the sequence visually and through related words.","rhythm, mnemonic, conscientious","Clusters vary by word and origin; this is a noticing strategy, not a universal rule."],
+["🪜","Chunking long words","syllables + meaningful parts","Break difficult words into pronounceable chunks, then verify each chunk against the whole spelling.","met-a-mor-pho-sis; mis-cel-la-ne-ous; juxta-position","Chunking helps memory but does not guarantee that sounds reveal every letter."],
+["🌱","Prefixes and suffixes","in-, extra-, -ous, -ance","Meaningful word parts help you retain spelling across word families.","ordinary → extraordinary; persevere → perseverance; conspicuous → inconspicuous","Adding affixes can change letters and stress; confirm the final form."],
+["🔬","Word origin versus sound","silent and unexpected letters","When the spoken word has more than one plausible spelling, look for morphology and origin instead of guessing each letter from sound.","acquaintance, idiosyncrasy, onomatopoeia","Some spellings must be learned individually; origin is supporting evidence, not a perfect rule."],
+["🔡","Foundation: silent letters","kn, wr","Some initial letters are written but not pronounced.","knee, knit, write","Not all silent letters follow the same rule."],
+["🌈","Foundation: vowel teams","ai, ay, ea, ee","Two vowel letters sometimes represent one sound.","rain, play, team, sheep","Vowel teams vary, as in bread and break."],
+["🪄","Foundation: silent e","final e","Final e often changes a preceding vowel sound.","cap/cape, kit/kite","Useful clue, not a universal rule."],
+["🧱","Foundation: doubling","-ing, -ed","A short stressed vowel-consonant base often doubles its final consonant before a vowel suffix.","hop/hopping, plan/planned","Compare open/opening and other exceptions."]
 ];
+const wordTeaching={
+chrysanthemum:["Greek-derived spelling","Break the word into remembered chunks; the opening chrys- is easy to miss."],
+idiosyncrasy:["Word origin versus sound","The unusual sequence requires direct study; recognizing idio- and syn- may help."],
+juxtaposition:["Latin roots and word families","The familiar word position is preserved at the end."],
+photosynthesis:["Greek-derived spelling","Notice ph for the /f/ sound in photo-."],
+equilibrium:["Chunking long words","Practice the middle -libri- carefully; several vowels are hard to predict."],
+iridescent:["Advanced suffixes","Notice the -escent ending and compare related words."],
+inconspicuous:["Prefixes and suffixes","Find in- + conspicuous. The base spelling remains recognizable."],
+philanthropy:["Greek-derived spelling","The ph in phil- and -throp- are useful clues."],
+metamorphosis:["Greek-derived spelling","The ph in morph is a useful Greek-derived spelling clue."],
+perseverance:["Prefixes and suffixes","Connect persevere to perseverance, observing the changed ending."],
+conscientious:["Advanced suffixes","Connect conscience and conscientious, and study -tious."],
+miscellaneous:["Chunking long words","Chunk the word and pay attention to the double l."],
+acquaintance:["Language-of-origin clues","The ac-quaint- sequence is easy to miss; learn the exact letter order."],
+rhythm:["Unusual consonant clusters","Remember initial rh and the unusual use of y."],
+entrepreneur:["Language-of-origin clues","A French-derived word whose vowel sequence needs careful study."],
+extraordinary:["Prefixes and suffixes","Find extra- + ordinary."],
+bureaucracy:["Language-of-origin clues","French-influenced bureau has an unusual vowel sequence."],
+onomatopoeia:["Word origin versus sound","Practice the exact Greek-derived vowel sequence in -poeia."]
+};
 const KEY="beebloom_v1_data";
 let store;
 try{store=JSON.parse(localStorage.getItem(KEY)||"{}")}catch{store={}}
@@ -164,16 +190,24 @@ function hardImported(){
  const cutoff=Math.max(0,Math.floor(items.length*0.55));
  return items.slice(cutoff);
 }
+function difficulty(w){
+ if(w.difficulty==="very-hard"||w.difficulty==="hard")return w.difficulty;
+ if(w.source==="unseen"||demo.some(d=>d.word===w.word)||unseen.some(d=>d.word===w.word))return ["idiosyncrasy","onomatopoeia","entrepreneur","bureaucracy","chrysanthemum","miscellaneous","conscientious","acquaintance","equilibrium"].includes(w.word)?"very-hard":"hard";
+ if(Number.isInteger(Number(w.number))&&Number(w.number)>0)return Number(w.number)>=351?"very-hard":"hard";
+ return "unrated";
+}
 function pool(){
  const set=$("set").value, listed=hardImported();
  const extras=unseen.map(w=>({...w,source:"unseen"}));
- if(set==="listed")return listed.length?listed:store.words.length?[]:demo;
- if(set==="unseen")return extras;
+ const tier=$("difficulty")?.value||"all";
+ const choose=items=>tier==="all"?items:items.filter(w=>difficulty(w)===tier||difficulty(w)==="unrated");
+ if(set==="listed")return choose(listed.length?listed:store.words.length?[]:demo);
+ if(set==="unseen")return choose(extras);
  if(set==="review"){
   const misses=new Set(store.attempts.filter(x=>!x.correct).map(x=>x.word));
-  return [...listed,...(store.words.length?[]:demo),...extras].filter(w=>misses.has(w.word));
+  return choose([...listed,...(store.words.length?[]:demo),...extras].filter(w=>misses.has(w.word)));
  }
- return [...(store.words.length?listed:demo),...extras];
+ return choose([...(store.words.length?listed:demo),...extras]);
 }
 function newRound(){let p=pool();if(!p.length){alert("No words in this set yet. Import a list or choose Mixed garden.");return}round=p.slice().sort(()=>Math.random()-.5).slice(0,+$("roundSize").value);idx=0;session=true;active=0;touch();nextWord()}
 function nextWord(){scored=false;current=round[idx]||null;$("feedback").classList.add("hidden");$("next").classList.add("hidden");$("letters").value="";$("counter").textContent="Word "+(current?idx+1:round.length)+" of "+round.length;if(!current){session=false;$("prompt").textContent="Amazing work! 🌟";$("promptInfo").textContent="Round complete. Start another round to grow stronger.";save();render();return}$("prompt").textContent="Listen carefully 🐝";$("promptInfo").textContent="Say the word, spell it letter by letter, then say the word again.";$("letters").focus();speak("Your word is "+current.word)}
@@ -183,7 +217,7 @@ $("sentence").onclick=()=>{if(current)speak(current.sentence||"No example senten
 $("skip").onclick=()=>{if(current){if(!scored)record(false,true);idx++;nextWord()}};
 $("next").onclick=()=>{idx++;nextWord()};
 function record(correct,skipped=false){store.attempts.push({word:current.word,correct,skipped,source:current.source||"listed",date:new Date().toISOString(),letters:$("letters").value,seconds:active});save()}
-$("check").onclick=()=>{if(!current||scored)return;const entered=letterNorm($("letters").value);if(!entered){alert("Spell the word aloud or enter letters before checking.");return}const answers=[current.word,...(current.alternates||[])].map(norm);const good=answers.includes(entered);scored=true;record(good);const f=$("feedback");f.className="feedback"+(good?"":" bad");f.textContent=(good?"🌟 Correct! ":"🌱 Nice try! ")+"The word is "+current.word+". "+(good?"":"Try remembering its pattern next time. ");$("next").classList.remove("hidden");speak(good?"Wonderful spelling!":"Good effort. The word was "+current.word);render()};
+$("check").onclick=()=>{if(!current||scored)return;const entered=letterNorm($("letters").value);if(!entered){alert("Spell the word aloud or enter letters before checking.");return}const answers=[current.word,...(current.alternates||[])].map(norm);const good=answers.includes(entered);scored=true;record(good);const f=$("feedback");f.className="feedback"+(good?"":" bad");const clue=wordTeaching[norm(current.word)];f.textContent=(good?"🌟 Correct! ":"🌱 Nice try! ")+"The word is "+current.word+". "+(clue?"🧩 "+clue[0]+": "+clue[1]:(good?"":"Try a related spelling strategy in Pattern Garden."));$("next").classList.remove("hidden");speak(good?"Wonderful spelling!":"Good effort. The word was "+current.word);render()};
 $("letters").addEventListener("keydown",e=>{if(e.key==="Enter")$("check").click()});
 const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
 $("mic").onclick=()=>{if(!current||scored)return;if(!Recognition){$("voiceNote").textContent="Speech recognition unavailable. Type letters instead.";return}
