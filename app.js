@@ -48,6 +48,7 @@ const VOICE_KEY="beebloom_voice_preferences_v1";
 let voicePreference={name:"",rate:0.83};
 try{voicePreference={...voicePreference,...JSON.parse(localStorage.getItem(VOICE_KEY)||"{}")}}catch{}
 let availableVoices=[];
+let allUSVoices=[];
 function loadVoices(){
  const status=$("voiceStatus");
  const selector=$("voiceSelect");
@@ -73,7 +74,9 @@ function loadVoices(){
    if(/^(samantha|ava|allison|joelle|nicky|susan|tom|alex|daniel)(\b|$)/i.test(n))return 2;
    return 3;
   };
-  availableVoices=voices.filter(v=>v&&us(v)&&ordinary(v)).sort((a,b)=>rank(a)-rank(b)||(a.name||"").localeCompare(b.name||""));
+  allUSVoices=voices.filter(v=>v&&us(v)).sort((a,b)=>rank(a)-rank(b)||(a.name||"").localeCompare(b.name||""));
+  const showAll=!!$("showAllVoices")?.checked;
+  availableVoices=showAll?allUSVoices:allUSVoices.filter(ordinary);
   while(selector.firstChild)selector.removeChild(selector.firstChild);
   const automatic=document.createElement("option");
   automatic.value="";
@@ -86,9 +89,10 @@ function loadVoices(){
    selector.appendChild(option);
   }
   selector.value=availableVoices.some(v=>v.voiceURI===voicePreference.name)?voicePreference.name:"";
+  const hidden=allUSVoices.length-availableVoices.length;
   status.textContent=availableVoices.length
-   ?availableVoices.length+" standard U.S. English voices found. Novelty effects are hidden. Preview before practicing."
-   :"No U.S. English voices exposed by Safari. The browser may still use its default voice; check iPad Settings → Accessibility → Spoken Content → Voices for U.S. voices.";
+   ?availableVoices.length+" U.S. voices shown"+(hidden?" ("+hidden+" novelty/effect voices hidden).":"") + " Preview to choose the clearest."
+   :"No U.S. English voices exposed by Safari. Try device voice settings or the automatic voice.";
  }catch(error){
   status.textContent="Voice list unavailable on this iPad. Default voice and Preview voice may still work.";
  }
@@ -99,13 +103,14 @@ function speak(text){
  try{
   speechSynthesis.cancel();
   const u=new SpeechSynthesisUtterance(text);
-  const voice=availableVoices.find(v=>v.voiceURI===voicePreference.name)||availableVoices[0];
+  const voice=availableVoices.find(v=>v.voiceURI===voicePreference.name)||availableVoices.find(v=>/^samantha$/i.test(v.name||""))||availableVoices[0];
   if(voice){u.voice=voice;u.lang="en-US"}else u.lang="en-US";
   u.rate=Number(voicePreference.rate)||0.83;
   speechSynthesis.speak(u);
  }catch(e){$("voiceNote").textContent="Audio could not start. Check sound settings or select a different voice."}
 }
 $("voiceSelect").onchange=e=>{voicePreference.name=e.target.value;saveVoice()};
+$("showAllVoices").onchange=loadVoices;
 $("voiceSpeed").value=String(voicePreference.rate);
 $("voiceSpeed").onchange=e=>{voicePreference.rate=Number(e.target.value);saveVoice()};
 $("previewVoice").onclick=()=>speak("Hello, spelling star! I am your spelling bee coach. Your word is butterfly.");
