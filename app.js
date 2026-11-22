@@ -49,16 +49,36 @@ let voicePreference={name:"",rate:0.83};
 try{voicePreference={...voicePreference,...JSON.parse(localStorage.getItem(VOICE_KEY)||"{}")}}catch{}
 let availableVoices=[];
 function loadVoices(){
- if(!("speechSynthesis" in window))return;
- availableVoices=speechSynthesis.getVoices().filter(v=>/^en(?:-|$)/i.test(v.lang)).sort((a,b)=>a.lang.localeCompare(b.lang)||a.name.localeCompare(b.name));
+ const status=$("voiceStatus");
  const selector=$("voiceSelect");
- const existing=voicePreference.name;
- selector.replaceChildren();
- const automatic=new Option("🐝 Default voice (device)", "");
- selector.add(automatic);
- for(const voice of availableVoices)selector.add(new Option(voice.name+" ("+voice.lang+")"+(voice.localService?"":" · online"),voice.voiceURI));
- selector.value=availableVoices.some(v=>v.voiceURI===existing)?existing:"";
- $("voiceStatus").textContent=availableVoices.length?availableVoices.length+" English voices on this device/browser":"No English voices reported yet. Try refreshing or another browser.";
+ if(!status||!selector)return;
+ selector.disabled=false;
+ status.textContent="Checking voices on this device…";
+ if(!window.speechSynthesis||typeof window.speechSynthesis.getVoices!=="function"){
+  status.textContent="Voice list unavailable on this browser. Device default voice may still work.";
+  return;
+ }
+ try{
+  const voices=window.speechSynthesis.getVoices()||[];
+  availableVoices=voices.filter(v=>v&&/^en(?:-|$)/i.test(v.lang||"")).sort((a,b)=>(a.lang||"").localeCompare(b.lang||"")||(a.name||"").localeCompare(b.name||""));
+  while(selector.firstChild)selector.removeChild(selector.firstChild);
+  const automatic=document.createElement("option");
+  automatic.value="";
+  automatic.textContent="🐝 Default voice (device)";
+  selector.appendChild(automatic);
+  for(const voice of availableVoices){
+   const option=document.createElement("option");
+   option.value=voice.voiceURI;
+   option.textContent=voice.name+" ("+voice.lang+")";
+   selector.appendChild(option);
+  }
+  selector.value=availableVoices.some(v=>v.voiceURI===voicePreference.name)?voicePreference.name:"";
+  status.textContent=availableVoices.length
+   ?availableVoices.length+" English voices available. Tap Preview voice to try one."
+   :"Safari has not exposed extra English voices. Use Default voice and Preview voice. You can also try iPad Settings → Accessibility → Spoken Content → Voices.";
+ }catch(error){
+  status.textContent="Voice list unavailable on this iPad. Default voice and Preview voice may still work.";
+ }
 }
 function saveVoice(){try{localStorage.setItem(VOICE_KEY,JSON.stringify(voicePreference))}catch{}}
 function speak(text){
@@ -76,11 +96,15 @@ $("voiceSelect").onchange=e=>{voicePreference.name=e.target.value;saveVoice()};
 $("voiceSpeed").value=String(voicePreference.rate);
 $("voiceSpeed").onchange=e=>{voicePreference.rate=Number(e.target.value);saveVoice()};
 $("previewVoice").onclick=()=>speak("Hello, spelling star! I am your spelling bee coach. Your word is butterfly.");
-if("speechSynthesis" in window){
- loadVoices();
- speechSynthesis.addEventListener?.("voiceschanged",loadVoices);
- setTimeout(loadVoices,800);
+loadVoices();
+if(window.speechSynthesis){
+ try{
+  if(typeof window.speechSynthesis.addEventListener==="function")window.speechSynthesis.addEventListener("voiceschanged",loadVoices);
+  else window.speechSynthesis.onvoiceschanged=loadVoices;
+ }catch(error){}
 }
+setTimeout(loadVoices,800);
+setTimeout(()=>{const status=$("voiceStatus");if(status&&/^(Loading|Checking)/.test(status.textContent))status.textContent="Voice selection unavailable. The device default may still work.";},2500);
 
 function norm(s){return s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z]/g,"")}
 function letterNorm(s){let t=s.toLowerCase().trim().replace(/^(i spell|spelling|my spelling is|the word is)\s+/,"");const names={ay:"a",bee:"b",be:"b",cee:"c",see:"c",dee:"d",ee:"e",eff:"f",gee:"g",aitch:"h",eye:"i",jay:"j",kay:"k",ell:"l",em:"m",en:"n",oh:"o",pee:"p",cue:"q",queue:"q",are:"r",ess:"s",tee:"t",you:"u",vee:"v",doubleyou:"w",ex:"x",why:"y",zee:"z",zed:"z"};const tokens=t.replace(/[-.,]/g," ").split(/\s+/).filter(Boolean);return tokens.length>1?tokens.map(x=>names[x]||x).join("").replace(/[^a-z]/g,""):norm(t)}
