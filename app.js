@@ -62,12 +62,22 @@ function loadVoices(){
   const voices=window.speechSynthesis.getVoices()||[];
   // Only explicitly US English voices; never silently substitute UK/AU accents.
   const us=v=>/^en[-_]US$/i.test(v.lang||"");
-  const quality=v=>/premium|enhanced|natural|neural|siri/i.test(v.name||"")?0:1;
-  availableVoices=voices.filter(v=>v&&us(v)).sort((a,b)=>quality(a)-quality(b)||(a.name||"").localeCompare(b.name||""));
+  // iOS mixes novelty/effect voices with ordinary speech. Exclude effects for
+  // spelling practice; this is a conservative name-based filter.
+  const novelty=/^(albert|bad news|bahh|bells|boing|bubbles|cellos|fred|good news|hysterical|jester|junior|kathy|organ|pipe organ|princess|superstar|trinoids|whisper|zarvox|wobble|rocko|sandy|grandma|grandpa)$/i;
+  const ordinary=v=>!novelty.test((v.name||"").trim());
+  const rank=v=>{
+   const n=v.name||"";
+   if(/siri/i.test(n))return 0;
+   if(/premium|enhanced|natural|neural/i.test(n))return 1;
+   if(/^(samantha|ava|allison|joelle|nicky|susan|tom|alex|daniel)(\b|$)/i.test(n))return 2;
+   return 3;
+  };
+  availableVoices=voices.filter(v=>v&&us(v)&&ordinary(v)).sort((a,b)=>rank(a)-rank(b)||(a.name||"").localeCompare(b.name||""));
   while(selector.firstChild)selector.removeChild(selector.firstChild);
   const automatic=document.createElement("option");
   automatic.value="";
-  automatic.textContent="🐝 Auto: Siri if available, otherwise U.S. voice";
+  automatic.textContent="🐝 Recommended U.S. voice";
   selector.appendChild(automatic);
   for(const voice of availableVoices){
    const option=document.createElement("option");
@@ -77,7 +87,7 @@ function loadVoices(){
   }
   selector.value=availableVoices.some(v=>v.voiceURI===voicePreference.name)?voicePreference.name:"";
   status.textContent=availableVoices.length
-   ?availableVoices.length+" U.S. English voices found. Auto prefers Siri when Safari exposes it; otherwise a natural U.S. voice."
+   ?availableVoices.length+" standard U.S. English voices found. Novelty effects are hidden. Preview before practicing."
    :"No U.S. English voices exposed by Safari. The browser may still use its default voice; check iPad Settings → Accessibility → Spoken Content → Voices for U.S. voices.";
  }catch(error){
   status.textContent="Voice list unavailable on this iPad. Default voice and Preview voice may still work.";
@@ -89,7 +99,7 @@ function speak(text){
  try{
   speechSynthesis.cancel();
   const u=new SpeechSynthesisUtterance(text);
-  const voice=availableVoices.find(v=>v.voiceURI===voicePreference.name)||availableVoices.find(v=>/siri/i.test(v.name))||availableVoices[0];
+  const voice=availableVoices.find(v=>v.voiceURI===voicePreference.name)||availableVoices[0];
   if(voice){u.voice=voice;u.lang="en-US"}else u.lang="en-US";
   u.rate=Number(voicePreference.rate)||0.83;
   speechSynthesis.speak(u);
